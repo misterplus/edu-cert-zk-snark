@@ -61,36 +61,36 @@
 ### Issuerance
 
 1. Let each student's data be `d(s)`, where `s` is the student.
-2. School hashes each `d(s)`, then generates and sends a random secret `n(s)` to each student, then calculates `commit(s) = hash(hash(d(s)), n(s))`. All `n(s)` are then deleted afterwards.
-3. School aggregates all `commit(s)`, constructs a merkle tree out of them, multi-signs the root hash, then submits all `commit(s)` and the multi-signed root hash to MOE.
-4. MOE verifies the root hash, then publishes all `commit(s)` received in `3`.
-5. Each student generates a zk-proof using their `d(s)` and `n(s)`, proving the corresponding `commit(s)` does belong to them without revealing `d(s)` and `n(s)`. Then they submit this proof to the smart contract storing the commitment list.
-6. MOE multi-signs any verified `commit(s)` and adds it to the commitment merkle tree, returning a leaf index `l(commit(s))` for each of them.
+2. School generates and sends a random secret `n(s)` to each student, calculates `commit(s) = hash(d(s), n(s))`, then generates a zk-proof `lp(s)` for each `commit(s)` without revealing `n(s)`. All `n(s)` are then deleted.
+3. MOE generates a one-time private-public key pair, sends the public key to the school. School then aggregates all `commit(s)`, constructs a merkle tree out of them, multi-signs the root hash, then encrypts and submits all `commit(s)`, `lp(s)`, `d(s)` and the multi-signed root hash to MOE.
+4. MOE decrypts the data using the private key, reconstructs the merkle tree, verifies the root hash is correct and multi-signed, then publishes all `commit(s)`.
+5. School verifies online that all `commit(s)` are correct.
+6. MOE multi-signs the root hash and adds all `commit(s)` in that tree to the commitment merkle tree, returning a leaf index `l(commit(s))` for each of them. All the pairing `d(s)` are then deleted.
 
 ### Verification
 
-1. Student generates a zk-proof `p(s)` using their `hash(d(s))`, `n(s)` and a timestamp `t` (for when they want this proof to expire), proving their `commit(s)` belongs to the commitment merkle tree without revealing `n(s)`.
-2. A relevant 3rd party generates a one-time private-public key pair, sends the public key to the student. The student then encrypts their `p(s)`, `d(s)` and `t` with the public key, then sends the encrypted data back to the relevant 3rd party.
-3. The relevant 3rd party then decrypts the data with the private key, revealing `p(s)`, `d(s)` and `t` to themselves. Then they may use these info to interact with the smart contract storing the commitment merkle tree, verifying the underlying certificate.
+1. Student generates a zk-proof `tp(s)` using their `d(s)`, `n(s)` and a timestamp `t` (for when they want this proof to expire), proving their `commit(s)` belongs to the commitment merkle tree without revealing `n(s)`.
+2. A relevant 3rd party generates a one-time private-public key pair, sends the public key to the student. The student then encrypts their `tp(s)`, `d(s)` and `t` with the public key, then sends the encrypted data back to the relevant 3rd party.
+3. The relevant 3rd party then decrypts the data with the private key, revealing `tp(s)`, `d(s)` and `t` to themselves. Then they may use these info to interact with the smart contract storing the commitment merkle tree, verifying the underlying certificate.
 
 ### Invalidation
 
-1. If a school wants to revoke one's certificate, they reconstruct `hash(d(s))` using `d(s)`. Then submit it to MOE.
+1. If a school wants to revoke one's certificate, they reconstruct and multi-sign `hash(d(s))` using `d(s)`. Then submit it to MOE.
 2. After MOE multi-signs `hash(d(s))`, it is flaged as blacklisted, any related proof generated will be rendered invalid.
 
 ### Solution to Previous Problems
 
 - In `Issuerance-3`
   - An individual in power may submit arbitrary data to MOE.
-    - Solution: A commitment must be multi-signed before it's submitted. If the length of all `commit(s)` is incorrect, a multi-signer would refuse to sign.
+    - Solution: A commitment must be multi-signed before it's submitted. If one of all `commit(s)` is incorrect, a multi-signer would and should refuse to sign.
 - In `Issuerance-4`
   - All student data is publicized.
-    - Solution: `commit(s)` does not reveal anything about `s`.
+    - Solution: Revealing `commit(s)` does not reveal anything about `d(s)`.
 - In `Issuerance-6`
   - An individual in power may store arbitrary data into the database.
-    - Solution: A commitment must be verified and multi-signed before it's added to the merkle tree. A student failing to verify their `commit(s)` would indicate that at least one of the `commit(s)` is tampered with, in this case all `commit(s)` in that list would be marked invalid for resubmission.
+    - Solution: A commitment must be verified and multi-signed before it's added to the merkle tree. If one of all `commit(s)` is incorrect, a multi-signer would and should refuse to sign.
   - All student data is internally available for MOE.
-    - Solution: `commit(s)` does not reveal anything about `s`.
+    - Solution: All `d(s)` are deleted after all `commit(s)` have been added to the tree.
 - In `Verification-1`
   - Leaking passwords will lead to one's profile data being leaked.
     - Solution: Leaking `n(s)` does not reveal `d(s)`.
@@ -104,3 +104,30 @@
     - Solution: Smart Contracts are phishing-resistent.
   - A irrelevant 3rd party that intercepts such a certificate will lead to one's profile data being leaked.
     - Solution: Without the relevant 3rd party's private key, a irrelevant 3rd party cannot reveal the underlying `d(s)`.
+
+### Information Availability
+
+- Student `s` controls `d(s)` permanently.
+- School and MOE don't need to store `d(s)`, though they may decide to depending on their needs.
+- `d(s)` is only revealed to relevant 3rd parties.
+- `n(s)` is only controlled by `s` and not by any other entities.
+
+### Data Immutability
+
+- Once a `commit(s)` is added to the commitment merkle tree, it becomes immutable and cannot be edited or removed.
+- In the event of human errors in aggregating `d(s)`, the bad `commit(s)` can be flagged invalid by means described in `Invalidation`.
+- Then the school may submit new corrected `commit(s)`, following the same process described in `Issuerance`.
+
+### Technical Information
+
+- Contents of `d(s)` (128-bit)
+
+```json
+{
+  "id": "uint64", // Citizen ID, 18-digit
+  "school": "uint16", // School ID, 5-digit
+  "major": "uint16", // Major ID, 2-digit
+  "degree": "uint16", // Enum type for degrees, 2-digit
+  "year": "uint16" // Year of Graduation, 4-digit
+}
+```
