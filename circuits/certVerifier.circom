@@ -36,13 +36,14 @@ template CertVerifier(levels) {
 
     signal input root;
     signal input profile;
-    signal input profileHash;
     signal input timestamp; // not taking part in any computations
+
+    signal output profileHash;
 
     component hasher = CommitmentHasher();
     hasher.profile <== profile;
     hasher.secret <== secret;
-    profileHash === hasher.profileHash;
+    profileHash <== hasher.profileHash;
 
     component tree = MerkleTreeChecker(levels);
     tree.leaf <== hasher.commitment;
@@ -56,4 +57,4 @@ template CertVerifier(levels) {
     timestampSquare <== timestamp * timestamp;
 }
 
-component main {public [root, profile, profileHash, timestamp]} = CertVerifier(20);
+component main {public [root, profile, timestamp]} = CertVerifier(20);
