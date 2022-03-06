@@ -124,10 +124,11 @@
 
 ```json
 {
+  "prefix": "0xff", // Prefix for converting to fixed length decimals
   "id": "uint64", // Citizen ID, 18-digit
-  "school": "uint16", // School ID, 5-digit
-  "major": "uint16", // Major ID, 2-digit
-  "degree": "uint16", // Enum type for degrees, 2-digit
+  "school": "uint24", // School ID, 5-digit
+  "major": "uint8", // Major ID, 2-digit
+  "degree": "uint8", // Enum type for degrees, 2-digit
   "year": "uint16" // Year of Graduation, 4-digit
 }
 ```
