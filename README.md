@@ -61,7 +61,7 @@
 ### Issuerance
 
 1. Let each student's data be `d(s)`, where `s` is the student.
-2. School generates and sends a random secret `n(s)` to each student, calculates `commit(s) = hash(d(s), n(s))`, then generates a zk-proof `lp(s)` for each `commit(s)` without revealing `n(s)`. All `n(s)` are then deleted.
+2. School generates and sends a random secret `n(s)` to each student, calculates `commit(s) = pedersenHash(d(s), n(s))`, then generates a zk-proof `lp(s)` for each `commit(s)` without revealing `n(s)`. All `n(s)` are then deleted.
 3. MOE generates a one-time private-public key pair, sends the public key to the school. School then aggregates all `commit(s)`, constructs a merkle tree out of them, multi-signs the root hash, then encrypts and submits all `commit(s)`, `lp(s)`, `d(s)` and the multi-signed root hash to MOE.
 4. MOE decrypts the data using the private key, reconstructs the merkle tree, verifies the root hash is correct and multi-signed, then publishes all `commit(s)`.
 5. School verifies online that all `commit(s)` are correct.
@@ -75,8 +75,8 @@
 
 ### Invalidation
 
-1. If a school wants to revoke one's certificate, they reconstruct and multi-sign `hash(d(s))` using `d(s)`. Then submit it to MOE.
-2. After MOE multi-signs `hash(d(s))`, it is flaged as blacklisted, any related proof generated will be rendered invalid.
+1. If a school wants to revoke one's certificate, they reconstruct and multi-sign `pedersenHash(d(s))` using `d(s)`. Then submit it to MOE.
+2. After MOE multi-signs `pedersenHash(d(s))`, it is flaged as blacklisted, any related proof generated will be rendered invalid.
 
 ### Solution to Previous Problems
 
@@ -132,3 +132,5 @@
   "year": "uint16" // Year of Graduation, 4-digit
 }
 ```
+
+- Pedersen hash is chosen as the commitment hashing method as it's more friendly to circuits.
