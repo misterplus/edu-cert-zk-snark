@@ -1,0 +1,32 @@
+{
+  "dependencies": {
+    "circomlib": "^2.0.3",
+    "dotenv": "^16.0.0",
+    "snarkjs": "^0.4.14"
+  },
+  "name": "edu-cert-zk-snark",
+  "description": "Privacy-Centric Higher Education Certificate based on on-chain zk-SNARK",
+  "version": "1.0.0",
+  "directories": {
+    "test": "test"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/misterplus/edu-cert-zk-snark.git"
+  },
+  "keywords": [
+    "zk-snark",
+    "education",
+    "certificate"
+  ],
+  "author": "misterplus",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/misterplus/edu-cert-zk-snark/issues"
+  },
+  "homepage": "https://github.com/misterplus/edu-cert-zk-snark#readme"
+}
