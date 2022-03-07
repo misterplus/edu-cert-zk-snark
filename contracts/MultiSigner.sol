@@ -73,6 +73,7 @@ contract MultiSigner is Context {
         }
         require(_notConfirmed(_msgSender(), index), "Already confirmed");
         pendingAction.confirmations += 1;
+        confirmed[_msgSender()][index] = true;
     }
 
     function executeAction(uint256 index) external {
