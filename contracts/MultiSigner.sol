@@ -43,6 +43,11 @@ contract MultiSigner is Context {
         _;
     }
 
+    modifier onlyLegalActor(Action action, bytes memory data) {
+        require(_isActorLegal(_msgSender(), action, data), "Actor not legal");
+        _;
+    }
+
     constructor(address[] memory initialSigners) {
         for (uint256 i = 0; i < initialSigners.length; i++) {
             superSigners[initialSigners[i]] = true;
@@ -50,29 +55,31 @@ contract MultiSigner is Context {
         superSignerCount = uint8(initialSigners.length);
     }
 
-    function startAction(Action action, bytes calldata data) external {
-        if (_isActionSuper(action)) {
-            require(isSuperSigner(_msgSender()), "Not super signer");
-        } else {
-            require(isSigner(_msgSender(), abi.decode(data[0:3], (uint24))), "Not signer");
-        }
+    function encodeSuperSigner(address addr) external pure returns (bytes memory) {
+        return abi.encode(addr);
+    }
+
+    function encodeSigner(uint24 school, address addr) external pure returns (bytes memory) {
+        return abi.encode(school, addr);
+    }
+
+    function encodeInitSigners(uint24 school, address[] memory addrs) external pure returns (bytes memory) {
+        return abi.encode(school, addrs);
+    }
+
+    function startAction(Action action, bytes calldata data) external onlyLegalActor(action, data) {
         require(_isActionLegal(action, data), "Action not legal");
         pendingActions.push(PendingAction(action, data, 1, false));
         confirmed[_msgSender()][pendingActions.length - 1] = true;
         emit NewPendingAction(pendingActions.length - 1, action, data);
     }
 
-    function confirmAction(uint256 index) external {
-        PendingAction storage pendingAction = pendingActions[index];
-        if (_isActionSuper(pendingAction.action)) {
-            require(isSuperSigner(_msgSender()), "Not super signer");
-        } else {
-            bytes memory data = pendingAction.data;
-            (uint24 school, address addr) = abi.decode(data, (uint24, address));
-            require(isSigner(_msgSender(), school), "Not signer");
-        }
+    function confirmAction(uint256 index)
+        external
+        onlyLegalActor(pendingActions[index].action, pendingActions[index].data)
+    {
         require(_notConfirmed(_msgSender(), index), "Already confirmed");
-        pendingAction.confirmations += 1;
+        pendingActions[index].confirmations += 1;
         confirmed[_msgSender()][index] = true;
     }
 
@@ -134,14 +141,27 @@ contract MultiSigner is Context {
             address addr = abi.decode(data, (address));
             return isSuperSigner(addr);
         } else if (action == Action.InitSigner) {
-            uint24 school = abi.decode(data[0:3], (uint24));
-            return signerCount[school] == 0;
+            (uint24 school, address[] memory addrs) = abi.decode(data, (uint24, address[]));
+            return signerCount[school] == 0 && addrs.length > 0;
         } else if (action == Action.AddSigner) {
             (uint24 school, address addr) = abi.decode(data, (uint24, address));
             return !isSigner(addr, school);
         } else {
             (uint24 school, address addr) = abi.decode(data, (uint24, address));
             return isSigner(addr, school);
+        }
+    }
+
+    function _isActorLegal(
+        address actor,
+        Action action,
+        bytes memory data
+    ) internal view returns (bool) {
+        if (_isActionSuper(action)) {
+            return isSuperSigner(actor);
+        } else {
+            (uint24 school, address addr) = abi.decode(data, (uint24, address));
+            return isSigner(actor, school) && addr != address(0);
         }
     }
 
