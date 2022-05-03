@@ -19,7 +19,7 @@ contract MultiSigner is Context {
         bool executed;
     }
 
-    event NewPendingAction(uint256 indexed index, Action indexed action, bytes indexed data);
+    event NewPendingAction(uint256 indexed index, Action indexed action, bytes data);
     event ActionExecuted(uint256 indexed index);
 
     uint8 public superSignerCount;
@@ -48,6 +48,21 @@ contract MultiSigner is Context {
         _;
     }
 
+    modifier onlyLegalAction(Action action, bytes calldata data) {
+        require(_isActionLegal(action, data), "Action not legal");
+        _;
+    }
+
+    modifier notConfirmed(uint256 index) {
+        require(_notConfirmed(_msgSender(), index), "Already confirmed");
+        _;
+    }
+
+    modifier notExecuted(uint256 index) {
+        require(!pendingActions[index].executed, "Already executed");
+        _;
+    }
+
     constructor(address[] memory initialSigners) {
         for (uint256 i = 0; i < initialSigners.length; i++) {
             superSigners[initialSigners[i]] = true;
@@ -67,8 +82,11 @@ contract MultiSigner is Context {
         return abi.encode(school, addrs);
     }
 
-    function startAction(Action action, bytes calldata data) external onlyLegalActor(action, data) {
-        require(_isActionLegal(action, data), "Action not legal");
+    function startAction(Action action, bytes calldata data)
+        external
+        onlyLegalActor(action, data)
+        onlyLegalAction(action, data)
+    {
         pendingActions.push(PendingAction(action, data, 1, false));
         confirmed[_msgSender()][pendingActions.length - 1] = true;
         emit NewPendingAction(pendingActions.length - 1, action, data);
@@ -77,15 +95,14 @@ contract MultiSigner is Context {
     function confirmAction(uint256 index)
         external
         onlyLegalActor(pendingActions[index].action, pendingActions[index].data)
+        notConfirmed(index)
     {
-        require(_notConfirmed(_msgSender(), index), "Already confirmed");
         pendingActions[index].confirmations += 1;
         confirmed[_msgSender()][index] = true;
     }
 
-    function executeAction(uint256 index) external {
+    function executeAction(uint256 index) external notExecuted(index) {
         PendingAction storage pendingAction = pendingActions[index];
-        require(!pendingAction.executed, "Already executed");
         Action action = pendingAction.action;
         uint8 confirmations = pendingAction.confirmations;
         bytes memory data = pendingAction.data;

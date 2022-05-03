@@ -4,6 +4,7 @@
     "circomlib": "^2.0.3",
     "circomlibjs": "^0.1.1",
     "dotenv": "^16.0.0",
+    "fixed-merkle-tree": "^0.7.3",
     "snarkjs": "^0.4.14"
   },
   "name": "edu-cert-zk-snark",
