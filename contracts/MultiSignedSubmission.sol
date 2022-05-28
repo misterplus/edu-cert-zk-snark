@@ -31,6 +31,7 @@ contract MultiSignedSubmission is MultiSigner, MerkleTreeWithHistory {
     Submission[] public submissions;
     IVerifier verifier;
     mapping(address => mapping(uint256 => bool)) signedSubmissions;
+    mapping(uint256 => bool) blacklisted;
 
     modifier notSigned(uint256 index) {
         require(_notSigned(_msgSender(), index), "Already signed");
@@ -101,6 +102,20 @@ contract MultiSignedSubmission is MultiSigner, MerkleTreeWithHistory {
             );
         }
         submissions[index].state = State.Commited;
+    }
+
+    function setBlacklist(uint256 profileHash, bool status) external onlySuperSigner {
+        blacklisted[profileHash] = status;
+    }
+
+    function verify(
+        uint256[2] memory a,
+        uint256[2][2] memory b,
+        uint256[2] memory c,
+        uint256[4] memory input
+    ) external view returns (bool) {
+        require(verifier.verifyProof(a, b, c, input), "Proof invalid");
+        return !blacklisted[input[0]];
     }
 
     function _notSigned(address addr, uint256 index) internal view returns (bool) {

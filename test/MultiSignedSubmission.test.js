@@ -1,4 +1,4 @@
-const { rbigint, pedersenHash, toBuffer } = require("../src/lib.js");
+const { rbigint, pedersenHash, toBuffer, generateSolidityParams } = require("../src/lib.js");
 const { MerkleTree } = require('fixed-merkle-tree');
 const circomlibjs = require('circomlibjs');
 const fs = require('fs');
@@ -264,6 +264,8 @@ contract("MultiSignedSubmission", accounts => {
             .then(data => logs = data.logs);
     });
 
+    let calldata;
+
     it("Logic: verify commitment", () => {
         let contract;
         return MultiSignedSubmission.deployed()
@@ -280,8 +282,7 @@ contract("MultiSignedSubmission", accounts => {
                 const path1 = tree.path(0);
                 const path2 = tree.path(1);
 
-                const vKey = JSON.parse(fs.readFileSync("./keys/certVerifier/verification_key.json"));
-
+                const time = BigInt(Date.now());
                 const prove1 = await snarkjs.groth16.fullProve(
                     {
                         secret: s1,
@@ -289,7 +290,7 @@ contract("MultiSignedSubmission", accounts => {
                         pathIndices: path1.pathIndices,
                         root: path1.pathRoot,
                         profile: BigInt(p1),
-                        timestamp: Date.now()
+                        timestamp: time
                     },
                     "./build/circuits/certVerifier_js/certVerifier.wasm",
                     "./keys/certVerifier/certVerifier_final.zkey"
@@ -301,16 +302,58 @@ contract("MultiSignedSubmission", accounts => {
                         pathIndices: path2.pathIndices,
                         root: path2.pathRoot,
                         profile: BigInt(p2),
-                        timestamp: Date.now()
+                        timestamp: time
                     },
                     "./build/circuits/certVerifier_js/certVerifier.wasm",
                     "./keys/certVerifier/certVerifier_final.zkey"
                 );
 
-                const res1 = await snarkjs.groth16.verify(vKey, prove1.publicSignals, prove1.proof);
-                const res2 = await snarkjs.groth16.verify(vKey, prove2.publicSignals, prove2.proof);
-                assert.equal(res1, true, "failed to generate proof");
-                assert.equal(res2, true, "failed to generate proof");
+                const calldata1 = generateSolidityParams(prove1.proof, prove1.publicSignals);
+                const calldata2 = generateSolidityParams(prove2.proof, prove2.publicSignals);
+
+                const res1 = await contract.verify(...calldata1);
+                const res2 = await contract.verify(...calldata2);
+
+                assert.equal(res1, true, "failed to verify proof");
+                assert.equal(res2, true, "failed to verify proof");
+
+                calldata = calldata1;
+            });
+    });
+
+    it("Logic: blacklist profile", () => {
+        let contract;
+        return MultiSignedSubmission.deployed()
+            .then(async instance => {
+                contract = instance;
+                await contract.setBlacklist(calldata[3][0], true, { from: accounts[0] });
+                const res = await contract.verify(...calldata);
+                assert.equal(res, false, "failed to blacklist profile");
+            });
+    });
+
+
+    it("Logic: add signer 2", () => {
+        let contract;
+        return MultiSignedSubmission.deployed()
+            .then(async instance => {
+                contract = instance;
+
+                let data = await contract.encodeSigner.call(10000, "0xb9d52BBFA575FdF0B0DFEe9fc09C5010FEaB98c9");
+                return contract.startAction(3, data, { from: accounts[2] });
             })
+            .then(() => {
+                return contract.confirmAction(5, { from: accounts[3] });
+            })
+            .then(() => {
+                return contract.executeAction(5, { from: accounts[4] });
+            })
+            .then(async () => {
+                let school = await contract.signers.call("0xb9d52BBFA575FdF0B0DFEe9fc09C5010FEaB98c9");
+                assert.equal(
+                    school, 10000, "failed to add signer"
+                );
+                console.log(contract.address);
+            });
     });
 });

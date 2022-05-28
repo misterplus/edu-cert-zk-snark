@@ -21,6 +21,8 @@ contract MultiSigner is Context {
 
     event NewPendingAction(uint256 indexed index, Action indexed action, bytes data);
     event ActionExecuted(uint256 indexed index);
+    event SuperSigner(address indexed addr, bool isNew, uint256 timestamp);
+    event Signer(address indexed addr, uint24 school, bool isNew, uint256 timestamp);
 
     uint8 public superSignerCount;
     PendingAction[] public pendingActions;
@@ -66,6 +68,7 @@ contract MultiSigner is Context {
     constructor(address[] memory initialSigners) {
         for (uint256 i = 0; i < initialSigners.length; i++) {
             superSigners[initialSigners[i]] = true;
+            emit SuperSigner(initialSigners[i], true, block.timestamp);
         }
         superSignerCount = uint8(initialSigners.length);
     }
@@ -112,14 +115,17 @@ contract MultiSigner is Context {
                 address addr = abi.decode(data, (address));
                 superSigners[addr] = true;
                 superSignerCount += 1;
+                emit SuperSigner(addr, true, block.timestamp);
             } else if (action == Action.RemoveSuperSigner) {
                 address addr = abi.decode(data, (address));
                 superSigners[addr] = false;
                 superSignerCount -= 1;
+                emit SuperSigner(addr, false, block.timestamp);
             } else {
                 (uint24 school, address[] memory addrs) = abi.decode(data, (uint24, address[]));
                 for (uint256 i = 0; i < addrs.length; i++) {
                     signers[addrs[i]] = school;
+                    emit Signer(addrs[i], school, true, block.timestamp);
                 }
                 signerCount[school] = uint8(addrs.length);
             }
@@ -129,9 +135,11 @@ contract MultiSigner is Context {
             if (action == Action.AddSigner) {
                 signers[addr] = school;
                 signerCount[school] += 1;
+                emit Signer(addr, school, true, block.timestamp);
             } else {
                 signers[addr] = uint24(0);
                 signerCount[school] -= 1;
+                emit Signer(addr, school, false, block.timestamp);
             }
         }
         pendingAction.executed = true;
