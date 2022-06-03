@@ -1,7 +1,6 @@
 const { rbigint, pedersenHash, toBuffer, generateSolidityParams } = require("../src/lib.js");
 const { MerkleTree } = require('fixed-merkle-tree');
 const circomlibjs = require('circomlibjs');
-const fs = require('fs');
 const snarkjs = require('snarkjs');
 
 const MERKLE_TREE_HEIGHT = 20;
@@ -135,7 +134,7 @@ contract("MultiSignedSubmission", accounts => {
                     school2, 0, "initial signers incorrect"
                 );
 
-                let data = await contract.encodeInitSigners.call(10000, [accounts[2], accounts[3]]);
+                let data = await contract.encodeInitSigners.call(10336, [accounts[2], accounts[3]]);
                 return contract.startAction(2, data, { from: accounts[0] });
             })
             .then(() => {
@@ -148,10 +147,10 @@ contract("MultiSignedSubmission", accounts => {
                 let school1 = await contract.signers.call(accounts[2]);
                 let school2 = await contract.signers.call(accounts[3]);
                 assert.equal(
-                    school1, 10000, "failed to init signers"
+                    school1, 10336, "failed to init signers"
                 );
                 assert.equal(
-                    school2, 10000, "failed to init signers"
+                    school2, 10336, "failed to init signers"
                 );
             });
     });
@@ -167,7 +166,7 @@ contract("MultiSignedSubmission", accounts => {
                     school, 0, "initial signers incorrect"
                 );
 
-                let data = await contract.encodeSigner.call(10000, accounts[4]);
+                let data = await contract.encodeSigner.call(10336, accounts[4]);
                 return contract.startAction(3, data, { from: accounts[2] });
             })
             .then(() => {
@@ -179,7 +178,7 @@ contract("MultiSignedSubmission", accounts => {
             .then(async () => {
                 let school = await contract.signers.call(accounts[4]);
                 assert.equal(
-                    school, 10000, "failed to add signer"
+                    school, 10336, "failed to add signer"
                 );
             });
     });
@@ -192,10 +191,10 @@ contract("MultiSignedSubmission", accounts => {
 
                 let school = await contract.signers.call(accounts[4]);
                 assert.equal(
-                    school, 10000, "initial signers incorrect"
+                    school, 10336, "initial signers incorrect"
                 );
 
-                let data = await contract.encodeSigner.call(10000, accounts[4]);
+                let data = await contract.encodeSigner.call(10336, accounts[4]);
                 return contract.startAction(4, data, { from: accounts[2] });
             })
             .then(() => {
@@ -227,14 +226,14 @@ contract("MultiSignedSubmission", accounts => {
 
                 p1 = await contract.encodeCommitment.call(
                     110101199003070492n,
-                    10000,
+                    10336,
                     36,
                     0,
                     2023
                 );
                 p2 = await contract.encodeCommitment.call(
                     110101199003074098n,
-                    10000,
+                    10336,
                     72,
                     1,
                     2023
@@ -247,7 +246,7 @@ contract("MultiSignedSubmission", accounts => {
                 let c2 = await pedersenHash(Buffer.concat(
                     [toBuffer(p2, 16), toBuffer(s2, 16)]
                 ));
-                return contract.submit([c1, c2], 10000, { from: accounts[2] });
+                return contract.submit([c1, c2], 10336, { from: accounts[2] });
             })
             .then(() => {
                 return contract.sign(0, { from: accounts[3] });
@@ -333,26 +332,12 @@ contract("MultiSignedSubmission", accounts => {
     });
 
 
-    it("Logic: add signer 2", () => {
+    it("Temp: Log address", () => {
         let contract;
         return MultiSignedSubmission.deployed()
             .then(async instance => {
                 contract = instance;
 
-                let data = await contract.encodeSigner.call(10000, "0xb9d52BBFA575FdF0B0DFEe9fc09C5010FEaB98c9");
-                return contract.startAction(3, data, { from: accounts[2] });
-            })
-            .then(() => {
-                return contract.confirmAction(5, { from: accounts[3] });
-            })
-            .then(() => {
-                return contract.executeAction(5, { from: accounts[4] });
-            })
-            .then(async () => {
-                let school = await contract.signers.call("0xb9d52BBFA575FdF0B0DFEe9fc09C5010FEaB98c9");
-                assert.equal(
-                    school, 10000, "failed to add signer"
-                );
                 console.log(contract.address);
             });
     });

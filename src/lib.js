@@ -33,5 +33,6 @@ module.exports = {
     rbigint,
     pedersenHash,
     toBuffer,
+    toHex,
     generateSolidityParams
 };

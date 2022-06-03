@@ -34,7 +34,7 @@ contract MultiSignedSubmission is MultiSigner, MerkleTreeWithHistory {
     mapping(uint256 => bool) blacklisted;
 
     modifier notSigned(uint256 index) {
-        require(_notSigned(_msgSender(), index), "Already signed");
+        require(indexNotSigned(_msgSender(), index), "Already signed");
         _;
     }
 
@@ -118,7 +118,11 @@ contract MultiSignedSubmission is MultiSigner, MerkleTreeWithHistory {
         return !blacklisted[input[0]];
     }
 
-    function _notSigned(address addr, uint256 index) internal view returns (bool) {
+    function totalSubmissions() external view returns (uint256) {
+        return submissions.length;
+    }
+
+    function indexNotSigned(address addr, uint256 index) public view returns (bool) {
         return !signedSubmissions[addr][index];
     }
 }
